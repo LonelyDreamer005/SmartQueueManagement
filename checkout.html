@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Checkout - College Stationery Shop</title>
+  <link rel="stylesheet" href="/static/index.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <style>
+    .checkout-grid {
+      display: grid;
+      grid-template-columns: 1fr 350px;
+      gap: 20px;
+    }
+    
+    @media (max-width: 768px) {
+      .checkout-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+    
+    .form-row {
+      display: flex;
+      gap: 15px;
+      margin-bottom: 15px;
+    }
+    
+    .form-row > div {
+      flex: 1;
+    }
+    
+    .form-control {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 16px;
+      margin-top: 5px;
+    }
+    
+    .payment-methods {
+      display: flex;
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+    
+    .payment-method {
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      padding: 15px;
+      text-align: center;
+      cursor: pointer;
+      flex: 1;
+      transition: all 0.3s;
+    }
+    
+    .payment-method:hover {
+      border-color: #2a6b35;
+    }
+    
+    .payment-method.active {
+      border-color: #2a6b35;
+      background-color: #f0f7f1;
+    }
+    
+    .payment-method i {
+      font-size: 24px;
+      margin-bottom: 8px;
+      display: block;
+    }
+    
+    .order-summary {
+      background: #f9f9f9;
+      padding: 20px;
+      border-radius: 4px;
+    }
+    
+    .summary-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid #eee;
+    }
+    
+    .summary-total {
+      font-weight: bold;
+      font-size: 18px;
+      margin-top: 15px;
+      padding-top: 15px;
+      border-top: 2px solid #ddd;
+      display: flex;
+      justify-content: space-between;
+    }
+    
+    .qr-code {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin: 20px 0;
+      padding: 15px;
+      border: 1px dashed #ccc;
+      border-radius: 8px;
+      background-color: #fff;
+    }
+    
+    .qr-code img {
+      width: 200px;
+      height: 200px;
+      margin-bottom: 10px;
+      border: 1px solid #eee;
+    }
+    
+    .qr-code-info {
+      text-align: center;
+      margin-top: 10px;
+      font-size: 14px;
+    }
+    
+    .upi-details {
+      margin-top: 15px;
+      background: #f0f7f1;
+      padding: 10px 15px;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+    
+    .upi-id {
+      font-weight: bold;
+      font-family: monospace;
+      background: #fff;
+      padding: 5px 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      display: inline-block;
+      margin: 5px 0;
+    }
+    
+    .terms-checkbox {
+      margin-top: 20px;
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+    }
+    
+    .terms-checkbox input {
+      margin-top: 5px;
+    }
+    
+    .checkout-btn {
+      width: 100%;
+      background: #2a6b35;
+      color: white;
+      border: none;
+      padding: 12px;
+      font-size: 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 20px;
+      transition: background 0.3s;
+    }
+    
+    .checkout-btn:hover {
+      background: #1e5128;
+    }
+    
+    .checkout-btn:disabled {
+      background: #aaa;
+      cursor: not-allowed;
+    }
+    
+    .hidden {
+      display: none;
+    }
+    
+    #upiForm {
+      margin-top: 15px;
+    }
+    
+    #paymentSuccess {
+      text-align: center;
+      padding: 30px 0;
+    }
+    
+    #paymentSuccess i {
+      font-size: 64px;
+      color: #2a6b35;
+      margin-bottom: 20px;
+    }
+    
+    #paymentSuccess h3 {
+      font-size: 24px;
+      margin-bottom: 15px;
+    }
+    
+    .success-details {
+      background: #f0f7f1;
+      padding: 15px;
+      border-radius: 4px;
+      margin-top: 20px;
+      text-align: left;
+    }
+    
+    .success-details p {
+      margin: 5px 0;
+    }
+    
+    .timer {
+      margin: 20px 0;
+      font-size: 18px;
+    }
+    
+    .token-number {
+      font-size: 32px;
+      font-weight: bold;
+      color: #2a6b35;
+      margin: 10px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1><i class="fas fa-cash-register"></i> Checkout</h1>
+      <p class="subtitle">Complete your order</p>
+    </header>
+
+    <div id="checkoutSection">
+      <div class="checkout-grid">
+        <!-- Customer Information & Payment -->
+        <div class="card">
+          <div class="card-header">
+            <h2><i class="fas fa-user"></i> Customer Information</h2>
+          </div>
+          <div class="card-body">
+            <form id="checkoutForm">
+              <div class="form-row">
+                <div>
+                  <label for="name">Full Name:</label>
+                  <input type="text" id="name" name="name" class="form-control" placeholder="Enter your full name" required>
+                </div>
+              </div>
+              
+              <div class="form-row">
+                <div>
+                  <label for="email">Email Address:</label>
+                  <input type="email" id="email" name="email" class="form-control" placeholder="Enter your email" required>
+                </div>
+                <div>
+                  <label for="phone">Phone Number:</label>
+                  <input type="tel" id="phone" name="phone" class="form-control" placeholder="Enter phone with country code (e.g., +1234567890)" required>
+                  <small>Must include country code with + sign</small>
+                </div>
+              </div>
+              
+              <div class="card-header" style="margin: 20px 0 15px;">
+                <h2><i class="fas fa-rupee-sign"></i> Payment Method</h2>
+              </div>
+              
+              <div class="payment-methods">
+                <div class="payment-method active" data-method="upi" onclick="selectPaymentMethod(this)">
+                  <i class="fas fa-mobile-alt"></i>
+                  <div>UPI Payment</div>
+                </div>
+                <div class="payment-method" data-method="cash" onclick="selectPaymentMethod(this)">
+                  <i class="fas fa-money-bill-wave"></i>
+                  <div>Pay at Counter</div>
+                </div>
+              </div>
+              
+              <div id="upiForm">
+                <div class="qr-code">
+                  <p><strong>Scan to Pay with UPI</strong></p>
+                  <img src="https://upload.wikimedia.org/wikipedia/commons/d/d0/QR_code_for_mobile_English_Wikipedia.svg" alt="Sample UPI QR Code">
+                  <div class="qr-code-info">
+                    <p>Scan this QR code with any UPI app<br>(PhonePe, Google Pay, Paytm, etc.)</p>
+                    <div class="upi-details">
+                      <p>Or pay to UPI ID: <span class="upi-id">collegestore@upi</span></p>
+                      <p>Reference: Your Order #<span id="upiOrderReference">-</span></p>
+                    </div>
+                  </div>
+                </div>
+                <div class="form-row">
+                  <div>
+                    <label for="upiTransactionId">UPI Transaction ID:</label>
+                    <input type="text" id="upiTransactionId" name="upiTransactionId" class="form-control" placeholder="Enter UPI Reference/Transaction ID">
+                    <small>Optional - Will be verified at the counter</small>
+                  </div>
+                </div>
+              </div>
+              
+              <div id="cashPaymentInfo" class="hidden">
+                <div class="upi-details">
+                  <p><i class="fas fa-info-circle"></i> You will pay at the counter when collecting your order.</p>
+                </div>
+              </div>
+              
+              <div class="terms-checkbox">
+                <input type="checkbox" id="terms" name="terms" required>
+                <label for="terms">I agree to the terms and conditions, and confirm my order</label>
+              </div>
+              
+              <button type="submit" class="checkout-btn" id="placeOrderBtn">
+                <i class="fas fa-shopping-cart"></i> Place Order
+              </button>
+            </form>
+          </div>
+        </div>
+        
+        <!-- Order Summary -->
+        <div>
+          <div class="card">
+            <div class="card-header">
+              <h2><i class="fas fa-shopping-basket"></i> Order Summary</h2>
+            </div>
+            <div class="card-body">
+              <div class="order-summary">
+                <div id="orderItems">
+                  <div class="text-center">
+                    <p>Loading your items...</p>
+                  </div>
+                </div>
+                
+                <div class="summary-total">
+                  <span>Total:</span>
+                  <span id="orderTotal">₹0</span>
+                </div>
+              </div>
+              
+              <div style="margin-top: 20px; text-align: center;">
+                <a href="/items" class="tertiary-btn">
+                  <i class="fas fa-arrow-left"></i> Back to Items
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Payment Success Section -->
+    <div id="paymentSuccessSection" class="hidden">
+      <div class="card">
+        <div class="card-header">
+          <h2><i class="fas fa-check-circle"></i> Order Confirmed</h2>
+        </div>
+        <div class="card-body">
+          <div id="paymentSuccess">
+            <i class="fas fa-check-circle"></i>
+            <h3>Thank you for your order!</h3>
+            <p>Your payment has been processed successfully.</p>
+            
+            <div class="token-number">
+              Token #<span id="successTokenId"></span>
+            </div>
+            
+            <p>You will receive SMS notification when your items are ready for collection.</p>
+            
+            <div class="timer">
+              Redirecting to home page in <span id="countdown">10</span> seconds...
+            </div>
+            
+            <button onclick="window.location.href='/'" class="tertiary-btn">
+              <i class="fas fa-home"></i> Return to Home
+            </button>
+            
+            <div class="success-details">
+              <p><strong>Order Reference:</strong> <span id="orderReference"></span></p>
+              <p><strong>Order Date:</strong> <span id="orderDate"></span></p>
+              <p><strong>Payment Method:</strong> <span id="paymentMethod"></span></p>
+              <p><strong>Amount Paid:</strong> <span id="amountPaid"></span></p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <footer>
+      <div class="links">
+        <a href="/">Home</a> | 
+        <a href="/items">Continue Shopping</a>
+      </div>
+      <p>College Stationery Shop &copy; 2025</p>
+    </footer>
+  </div>
+
+  <script>
+    // Load cart data from localStorage
+    const cart = JSON.parse(localStorage.getItem('stationeryCart') || '{}');
+    let paymentMethod = 'upi';
+    let tempOrderId = Math.floor(Math.random() * 1000000) + 1000;
+    
+    // Initialize page
+    window.onload = function() {
+      loadOrderSummary();
+      
+      // Set the temporary order reference ID for UPI payment
+      document.getElementById('upiOrderReference').textContent = tempOrderId;
+      
+      // Form submission
+      document.getElementById('checkoutForm').addEventListener('submit', function(event) {
+        event.preventDefault();
+        processOrder();
+      });
+    };
+    
+    // Load order summary
+    function loadOrderSummary() {
+      const orderItems = document.getElementById('orderItems');
+      const orderTotal = document.getElementById('orderTotal');
+      
+      if (Object.keys(cart).length === 0) {
+        orderItems.innerHTML = '<p class="text-center">Your cart is empty</p>';
+        orderTotal.textContent = '₹0';
+        document.getElementById('placeOrderBtn').disabled = true;
+        return;
+      }
+      
+      let total = 0;
+      let html = '';
+      
+      Object.values(cart).forEach(item => {
+        const itemTotal = item.price * item.quantity;
+        total += itemTotal;
+        
+        html += `
+          <div class="summary-item">
+            <div>
+              <strong>${item.name}</strong> <span class="text-muted">x ${item.quantity}</span>
+            </div>
+            <div>₹${itemTotal.toFixed(0)}</div>
+          </div>
+        `;
+      });
+      
+      orderItems.innerHTML = html;
+      orderTotal.textContent = `₹${total.toFixed(0)}`;
+    }
+    
+    // Select payment method
+    function selectPaymentMethod(element) {
+      // Remove active class from all payment methods
+      document.querySelectorAll('.payment-method').forEach(el => {
+        el.classList.remove('active');
+      });
+      
+      // Add active class to selected payment method
+      element.classList.add('active');
+      
+      // Update payment method variable
+      paymentMethod = element.dataset.method;
+      
+      // Show/hide payment form
+      document.getElementById('upiForm').classList.toggle('hidden', paymentMethod !== 'upi');
+      document.getElementById('cashPaymentInfo').classList.toggle('hidden', paymentMethod !== 'cash');
+    }
+    
+    // Process order
+    async function processOrder() {
+      const name = document.getElementById('name').value;
+      const phone = document.getElementById('phone').value;
+      const email = document.getElementById('email').value;
+      
+      if (Object.keys(cart).length === 0) {
+        alert('Your cart is empty!');
+        return;
+      }
+      
+      try {
+        // Disable button and show loading
+        const button = document.getElementById('placeOrderBtn');
+        button.disabled = true;
+        button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+        
+        // Get UPI transaction ID if applicable
+        const upiTransactionId = document.getElementById('upiTransactionId').value;
+        
+        // Prepare order data
+        const orderData = {
+          customer: {
+            name,
+            phone,
+            email
+          },
+          items: Object.values(cart).map(item => ({
+            id: item.id,
+            quantity: item.quantity,
+            price: item.price
+          })),
+          payment_method: paymentMethod,
+          // Set payment status based on payment method
+          payment_status: paymentMethod === 'upi' ? (upiTransactionId ? 'paid' : 'pending_verification') : 'pending'
+        };
+        
+        // If UPI and has transaction ID, add it
+        if (paymentMethod === 'upi' && upiTransactionId) {
+          orderData.upi_transaction_id = upiTransactionId;
+        }
+        
+        // Simulate processing time (in real app, this would be an API call)
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        
+        // Submit order to server
+        const response = await fetch('/api/place_order', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(orderData)
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+          throw new Error(data.message || 'Failed to place order');
+        }
+        
+        // Show success page
+        showOrderSuccess(data);
+        
+        // Clear cart
+        localStorage.removeItem('stationeryCart');
+        
+      } catch (error) {
+        console.error('Error placing order:', error);
+        alert('Error placing order: ' + error.message);
+        
+        // Re-enable button
+        document.getElementById('placeOrderBtn').disabled = false;
+        document.getElementById('placeOrderBtn').innerHTML = '<i class="fas fa-shopping-cart"></i> Place Order';
+      }
+    }
+    
+    // Show order success
+    function showOrderSuccess(orderData) {
+      // Calculate total
+      let total = 0;
+      Object.values(cart).forEach(item => {
+        total += item.price * item.quantity;
+      });
+      
+      // Update success page
+      document.getElementById('successTokenId').textContent = orderData.token_id;
+      document.getElementById('orderReference').textContent = orderData.order_id;
+      document.getElementById('orderDate').textContent = new Date().toLocaleString();
+      document.getElementById('paymentMethod').textContent = paymentMethod === 'upi' ? 'UPI Payment' : 'Pay at Counter';
+      document.getElementById('amountPaid').textContent = `₹${total.toFixed(0)}`;
+      
+      // Show success section and hide checkout section
+      document.getElementById('checkoutSection').classList.add('hidden');
+      document.getElementById('paymentSuccessSection').classList.remove('hidden');
+      
+      // Countdown for redirect
+      let countdown = 10;
+      const countdownElement = document.getElementById('countdown');
+      
+      const timer = setInterval(() => {
+        countdown--;
+        countdownElement.textContent = countdown;
+        
+        if (countdown <= 0) {
+          clearInterval(timer);
+          window.location.href = '/';
+        }
+      }, 1000);
+    }
+  </script>
+</body>
+</html>

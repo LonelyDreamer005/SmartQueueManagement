@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Queue Display - College Stationery Store</title>
+  <link rel="stylesheet" href="/static/index.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <style>
+    body {
+      background-color: #2c3e50;
+      color: white;
+    }
+    
+    .container {
+      max-width: 1000px;
+    }
+    
+    @media (min-width: 1200px) {
+      .container {
+        max-width: 1140px;
+      }
+    }
+    
+    .clock {
+      font-size: 24px;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1><i class="fas fa-book"></i> College Stationery Store</h1>
+      <p class="subtitle">Smart Queue Display Board</p>
+      <div class="clock" id="clock"></div>
+    </header>
+
+    <div class="display-board">
+      <div class="current-token">
+        <h2><i class="fas fa-bell"></i> Now Serving</h2>
+        <div class="token-display" id="currentToken">--</div>
+        <div class="status-message" id="currentName">No one is being served right now</div>
+      </div>
+      
+      <div class="next-in-line">
+        <h2><i class="fas fa-users"></i> Next in Line</h2>
+        <div class="next-tokens" id="nextTokens">
+          <div class="status-message">Queue is empty</div>
+        </div>
+      </div>
+    </div>
+    
+    <div style="text-align: center; margin-top: 30px;">
+      <p class="status-message">This display automatically refreshes every 5 seconds</p>
+      <p><a href="/" style="color: #3498db; text-decoration: none;">
+        <i class="fas fa-home"></i> Home Page
+      </a></p>
+    </div>
+  </div>
+
+  <script>
+    // Update clock
+    function updateClock() {
+      const now = new Date();
+      const timeString = now.toLocaleTimeString();
+      const dateString = now.toLocaleDateString(undefined, { 
+        weekday: 'long', 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+      });
+      document.getElementById('clock').textContent = `${dateString} | ${timeString}`;
+    }
+    
+    // Load current serving token
+    async function loadCurrentServing() {
+      try {
+        const res = await fetch('/api/current_serving');
+        
+        if (res.status === 200) {
+          const data = await res.json();
+          document.getElementById('currentToken').textContent = `#${data.id}`;
+          document.getElementById('currentName').textContent = data.name;
+        } else {
+          document.getElementById('currentToken').textContent = `--`;
+          document.getElementById('currentName').textContent = `No one is being served right now`;
+        }
+      } catch (err) {
+        console.error("Error loading current serving:", err);
+      }
+    }
+    
+    // Load queue status
+    async function loadQueue() {
+      try {
+        const res = await fetch('/queue_status');
+        const data = await res.json();
+        const container = document.getElementById('nextTokens');
+        
+        if (data.length === 0) {
+          container.innerHTML = `<div class="status-message">Queue is empty</div>`;
+          return;
+        }
+        
+        container.innerHTML = '';
+        
+        // Show the next 5 tokens in the queue
+        const tokensToShow = data.slice(0, 5);
+        
+        tokensToShow.forEach(token => {
+          const tokenElement = document.createElement('div');
+          tokenElement.className = 'next-token';
+          
+          if (token.priority > 0) {
+            tokenElement.className += ' priority-token';
+          }
+          
+          tokenElement.innerHTML = `
+            <div class="number">#${token.id}</div>
+            <div class="name">${token.name}</div>
+          `;
+          
+          container.appendChild(tokenElement);
+        });
+        
+        // If there are more tokens than we're showing
+        if (data.length > tokensToShow.length) {
+          const moreElement = document.createElement('div');
+          moreElement.className = 'next-token';
+          moreElement.innerHTML = `
+            <div class="number">+${data.length - tokensToShow.length}</div>
+            <div class="name">more</div>
+          `;
+          container.appendChild(moreElement);
+        }
+      } catch (err) {
+        console.error("Error loading queue:", err);
+      }
+    }
+    
+    // Initialize and set intervals
+    updateClock();
+    loadCurrentServing();
+    loadQueue();
+    
+    // Auto refresh
+    setInterval(updateClock, 1000);
+    setInterval(loadCurrentServing, 5000);
+    setInterval(loadQueue, 5000);
+  </script>
+</body>
+</html>

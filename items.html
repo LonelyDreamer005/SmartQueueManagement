@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stationary Items - College Store</title>
+  <link rel="stylesheet" href="/static/index.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <style>
+    .items-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+      gap: 20px;
+      margin-top: 20px;
+    }
+    
+    .item-card {
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      overflow: hidden;
+      transition: transform 0.3s;
+      background: #fff;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    
+    .item-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+    
+    .item-image {
+      height: 180px;
+      overflow: hidden;
+      background: #f5f5f5;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .item-emoji {
+      font-size: 80px;
+      line-height: 1;
+      text-align: center;
+    }
+    
+    .item-image img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+    
+    .item-details {
+      padding: 15px;
+    }
+    
+    .item-name {
+      font-weight: bold;
+      margin-bottom: 5px;
+      font-size: 16px;
+    }
+    
+    .item-description {
+      color: #666;
+      font-size: 14px;
+      margin-bottom: 10px;
+      height: 40px;
+      overflow: hidden;
+    }
+    
+    .item-price {
+      font-weight: bold;
+      color: #2a6b35;
+      margin-bottom: 15px;
+    }
+    
+    .stock-status {
+      font-size: 13px;
+      margin-bottom: 10px;
+    }
+    
+    .in-stock {
+      color: #2a6b35;
+    }
+    
+    .low-stock {
+      color: #ff9800;
+    }
+    
+    .out-of-stock {
+      color: #f44336;
+    }
+    
+    .cart-actions {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    
+    .quantity-control {
+      display: flex;
+      align-items: center;
+    }
+    
+    .quantity-btn {
+      background: #f0f0f0;
+      border: none;
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .quantity-input {
+      width: 40px;
+      text-align: center;
+      border: 1px solid #ddd;
+      margin: 0 5px;
+      padding: 5px;
+    }
+    
+    .add-to-cart {
+      background: #2a6b35;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      padding: 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background-color 0.3s;
+    }
+    
+    .add-to-cart:hover {
+      background: #1e5128;
+    }
+    
+    .add-to-cart i {
+      margin-right: 5px;
+    }
+    
+    .cart-summary {
+      position: sticky;
+      bottom: 0;
+      background: white;
+      padding: 15px;
+      border-top: 1px solid #ddd;
+      box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 100;
+    }
+    
+    .cart-total {
+      font-weight: bold;
+      font-size: 18px;
+    }
+    
+    .checkout-btn {
+      background: #2a6b35;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+    }
+    
+    .checkout-btn:hover {
+      background: #1e5128;
+    }
+    
+    .checkout-btn i {
+      margin-right: 8px;
+    }
+    
+    #cartBadge {
+      position: absolute;
+      top: -8px;
+      right: -8px;
+      background: red;
+      color: white;
+      border-radius: 50%;
+      width: 20px;
+      height: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+    }
+    
+    .view-cart-btn {
+      background: #2a6b35;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      padding: 8px 15px;
+      cursor: pointer;
+      position: relative;
+    }
+    
+    @media (max-width: 768px) {
+      .items-grid {
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      }
+      
+      .item-image {
+        height: 120px;
+      }
+      
+      .item-description {
+        height: 60px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1><i class="fas fa-book"></i> College Stationery Shop</h1>
+      <p class="subtitle">Select the items you need for your order</p>
+      
+      <div style="position: absolute; top: 15px; right: 15px;">
+        <button class="view-cart-btn" onclick="viewCart()">
+          <i class="fas fa-shopping-cart"></i>
+          <span id="cartBadge" style="display: none;">0</span>
+        </button>
+      </div>
+    </header>
+
+    <div class="card">
+      <div class="card-header">
+        <h2><i class="fas fa-shopping-basket"></i> Available Stationary Items</h2>
+      </div>
+      <div class="card-body">
+        <div id="itemsGrid" class="items-grid">
+          <div class="text-center">
+            <i class="fas fa-spinner fa-spin fa-2x"></i>
+            <p>Loading items...</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div id="cartSummary" class="cart-summary" style="display:none;">
+      <div class="cart-total">
+        Total: <span id="cartTotal">$0.00</span>
+      </div>
+      <button class="checkout-btn" onclick="proceedToCheckout()">
+        <i class="fas fa-cash-register"></i> Proceed to Checkout
+      </button>
+    </div>
+
+    <footer>
+      <div class="links">
+        <a href="/">Get Token</a> | 
+        <a href="/staff/login">Staff Login</a>
+      </div>
+      <p>College Stationery Shop &copy; 2025</p>
+    </footer>
+  </div>
+
+  <!-- Cart Modal -->
+  <div id="cartModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;">
+    <div style="position: relative; background: white; width: 80%; max-width: 600px; margin: 50px auto; padding: 20px; border-radius: 8px; box-shadow: 0 0 20px rgba(0,0,0,0.3);">
+      <button onclick="closeCartModal()" style="position: absolute; top: 10px; right: 10px; background: none; border: none; font-size: 18px; cursor: pointer;">
+        <i class="fas fa-times"></i>
+      </button>
+      
+      <h2 style="margin-top: 0;"><i class="fas fa-shopping-cart"></i> Your Cart</h2>
+      
+      <div id="cartItems" style="max-height: 300px; overflow-y: auto;">
+        <!-- Cart items will be inserted here -->
+      </div>
+      
+      <div style="display: flex; justify-content: space-between; margin-top: 20px; padding-top: 15px; border-top: 1px solid #ddd;">
+        <div style="font-weight: bold; font-size: 18px;">
+          Total: <span id="modalCartTotal">$0.00</span>
+        </div>
+        <button class="checkout-btn" onclick="proceedToCheckout()">
+          <i class="fas fa-cash-register"></i> Checkout
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Cart data structure
+    let cart = JSON.parse(localStorage.getItem('stationeryCart') || '{}');
+    let items = [];
+    
+    // Initialize the page
+    window.onload = function() {
+      loadItems();
+      updateCartDisplay();
+    };
+    
+    // Load items from API
+    async function loadItems() {
+      try {
+        const response = await fetch('/api/stationary_items');
+        items = await response.json();
+        displayItems(items);
+      } catch (error) {
+        console.error('Error loading items:', error);
+        document.getElementById('itemsGrid').innerHTML = 
+          '<p class="text-center">Error loading items. Please try again later.</p>';
+      }
+    }
+    
+    // Display items in the grid
+    function displayItems(items) {
+      const grid = document.getElementById('itemsGrid');
+      
+      if (!items || items.length === 0) {
+        grid.innerHTML = '<p class="text-center">No items available at the moment.</p>';
+        return;
+      }
+      
+      grid.innerHTML = '';
+      
+      items.forEach(item => {
+        // Determine stock status
+        let stockStatus = '';
+        if (item.quantity <= 0) {
+          stockStatus = '<span class="out-of-stock"><i class="fas fa-times-circle"></i> Out of stock</span>';
+        } else if (item.quantity < 10) {
+          stockStatus = `<span class="low-stock"><i class="fas fa-exclamation-circle"></i> Low stock (${item.quantity})</span>`;
+        } else {
+          stockStatus = `<span class="in-stock"><i class="fas fa-check-circle"></i> In stock (${item.quantity})</span>`;
+        }
+        
+        const cartQty = cart[item.id] ? cart[item.id].quantity : 0;
+        
+        // Handle price - Extract numeric value from price string (remove ₹ symbol if present)
+        const priceValue = typeof item.price === 'string' ? 
+          parseFloat(item.price.replace(/[^\d.-]/g, '')) : 
+          item.price;
+        
+        const itemEl = document.createElement('div');
+        itemEl.className = 'item-card';
+        itemEl.innerHTML = `
+          <div class="item-image">
+            <div class="item-emoji">${item.emoji || '📦'}</div>
+          </div>
+          <div class="item-details">
+            <div class="item-name">${item.name}</div>
+            <div class="item-description">${item.description}</div>
+            <div class="item-price">${item.price}</div>
+            <div class="stock-status">${stockStatus}</div>
+            <div class="cart-actions">
+              <div class="quantity-control">
+                <button class="quantity-btn" onclick="decrementQuantity(${item.id})" ${item.quantity <= 0 ? 'disabled' : ''}>
+                  <i class="fas fa-minus"></i>
+                </button>
+                <input type="text" class="quantity-input" id="qty-${item.id}" value="${cartQty}" readonly>
+                <button class="quantity-btn" onclick="incrementQuantity(${item.id})" ${item.quantity <= 0 ? 'disabled' : ''}>
+                  <i class="fas fa-plus"></i>
+                </button>
+              </div>
+              <button class="add-to-cart" onclick="addToCart(${item.id})" ${item.quantity <= 0 ? 'disabled' : ''}>
+                <i class="fas fa-cart-plus"></i>
+              </button>
+            </div>
+          </div>
+        `;
+        
+        grid.appendChild(itemEl);
+      });
+    }
+    
+    // Increment quantity
+    function incrementQuantity(itemId) {
+      const item = items.find(i => i.id === itemId);
+      if (!item) return;
+      
+      const currentQty = parseInt(document.getElementById(`qty-${itemId}`).value) || 0;
+      const newQty = Math.min(currentQty + 1, item.quantity);
+      document.getElementById(`qty-${itemId}`).value = newQty;
+    }
+    
+    // Decrement quantity
+    function decrementQuantity(itemId) {
+      const currentQty = parseInt(document.getElementById(`qty-${itemId}`).value) || 0;
+      const newQty = Math.max(currentQty - 1, 0);
+      document.getElementById(`qty-${itemId}`).value = newQty;
+    }
+    
+    // Add to cart function
+    function addToCart(itemId) {
+      const item = items.find(i => i.id === itemId);
+      if (!item) return;
+      
+      const quantity = parseInt(document.getElementById(`qty-${itemId}`).value) || 0;
+      if (quantity <= 0) return;
+      
+      // Extract numerical price value if the price is a string (like "₹100")
+      const priceValue = typeof item.price === 'string' ? 
+        parseFloat(item.price.replace(/[^\d.-]/g, '')) : 
+        item.price;
+      
+      if (!cart[itemId]) {
+        cart[itemId] = {
+          id: item.id,
+          name: item.name,
+          price: item.price, // Keep original price format from server
+          quantity: 0,
+          numericPrice: priceValue // Add a numeric version for calculations
+        };
+      }
+      
+      cart[itemId].quantity = quantity;
+      
+      // Save to localStorage
+      localStorage.setItem('stationeryCart', JSON.stringify(cart));
+      
+      // Update UI
+      updateCartDisplay();
+      
+      // Visual feedback
+      showToast('Item added to cart!');
+    }
+    
+    // Update cart display
+    function updateCartDisplay() {
+      const badge = document.getElementById('cartBadge');
+      const summary = document.getElementById('cartSummary');
+      
+      // Calculate total items and amount
+      let totalItems = 0;
+      let totalAmount = 0;
+      
+      Object.values(cart).forEach(item => {
+        totalItems += item.quantity;
+        // Handle price - Extract numeric value if it's a string with ₹ symbol
+        const itemPrice = typeof item.price === 'string' ? 
+          parseFloat(item.price.replace(/[^\d.-]/g, '')) : 
+          item.price;
+        totalAmount += itemPrice * item.quantity;
+      });
+      
+      // Update badge
+      if (totalItems > 0) {
+        badge.textContent = totalItems;
+        badge.style.display = 'flex';
+        summary.style.display = 'flex';
+      } else {
+        badge.style.display = 'none';
+        summary.style.display = 'none';
+      }
+      
+      // Update total with ₹ symbol to match backend format
+      document.getElementById('cartTotal').textContent = `₹${totalAmount.toFixed(0)}`;
+      document.getElementById('modalCartTotal').textContent = `₹${totalAmount.toFixed(0)}`;
+    }
+    
+    // View cart modal
+    function viewCart() {
+      const cartItems = document.getElementById('cartItems');
+      cartItems.innerHTML = '';
+      
+      let totalAmount = 0;
+      
+      if (Object.keys(cart).length === 0) {
+        cartItems.innerHTML = '<p class="text-center">Your cart is empty</p>';
+      } else {
+        const table = document.createElement('table');
+        table.style.width = '100%';
+        table.style.borderCollapse = 'collapse';
+        
+        // Table header
+        const thead = document.createElement('thead');
+        thead.innerHTML = `
+          <tr style="border-bottom: 1px solid #ddd;">
+            <th style="text-align: left; padding: 8px;">Item</th>
+            <th style="text-align: center; padding: 8px;">Qty</th>
+            <th style="text-align: right; padding: 8px;">Price</th>
+            <th style="text-align: right; padding: 8px;">Total</th>
+            <th style="padding: 8px;"></th>
+          </tr>
+        `;
+        table.appendChild(thead);
+        
+        // Table body
+        const tbody = document.createElement('tbody');
+        
+        Object.values(cart).forEach(item => {
+          // Handle price - Extract numeric value if it's a string with ₹ symbol
+          const itemPrice = typeof item.price === 'string' ? 
+            parseFloat(item.price.replace(/[^\d.-]/g, '')) : 
+            item.price;
+            
+          const itemTotal = itemPrice * item.quantity;
+          totalAmount += itemTotal;
+          
+          const tr = document.createElement('tr');
+          tr.style.borderBottom = '1px solid #eee';
+          tr.innerHTML = `
+            <td style="padding: 8px;">${item.name}</td>
+            <td style="text-align: center; padding: 8px;">${item.quantity}</td>
+            <td style="text-align: right; padding: 8px;">${typeof item.price === 'string' ? item.price : `₹${itemPrice.toFixed(0)}`}</td>
+            <td style="text-align: right; padding: 8px;">₹${itemTotal.toFixed(0)}</td>
+            <td style="padding: 8px; text-align: center;">
+              <button onclick="removeFromCart(${item.id})" style="background: none; border: none; color: red; cursor: pointer;" title="Remove">
+                <i class="fas fa-trash"></i>
+              </button>
+            </td>
+          `;
+          tbody.appendChild(tr);
+        });
+        
+        table.appendChild(tbody);
+        cartItems.appendChild(table);
+      }
+      
+      document.getElementById('modalCartTotal').textContent = `₹${totalAmount.toFixed(0)}`;
+      document.getElementById('cartModal').style.display = 'block';
+    }
+    
+    // Close cart modal
+    function closeCartModal() {
+      document.getElementById('cartModal').style.display = 'none';
+    }
+    
+    // Remove from cart
+    function removeFromCart(itemId) {
+      if (cart[itemId]) {
+        delete cart[itemId];
+        localStorage.setItem('stationeryCart', JSON.stringify(cart));
+        updateCartDisplay();
+        viewCart(); // Refresh the cart modal
+      }
+    }
+    
+    // Proceed to checkout
+    function proceedToCheckout() {
+      if (Object.keys(cart).length === 0) {
+        showToast('Your cart is empty!');
+        return;
+      }
+      
+      // Redirect to checkout page
+      window.location.href = '/checkout';
+    }
+    
+    // Show toast notification
+    function showToast(message) {
+      const toast = document.createElement('div');
+      toast.textContent = message;
+      toast.style.cssText = `
+        position: fixed;
+        bottom: 30px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(42, 107, 53, 0.9);
+        color: white;
+        padding: 12px 20px;
+        border-radius: 4px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        z-index: 1000;
+      `;
+      
+      document.body.appendChild(toast);
+      
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transition = 'opacity 0.5s';
+        setTimeout(() => {
+          document.body.removeChild(toast);
+        }, 500);
+      }, 2000);
+    }
+    
+    // Close modal when clicking outside
+    window.onclick = function(event) {
+      const modal = document.getElementById('cartModal');
+      if (event.target == modal) {
+        closeCartModal();
+      }
+    }
+  </script>
+</body>
+</html>

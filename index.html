@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart Queue Management System</title>
+  <link rel="stylesheet" href="/static/index.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1><i class="fas fa-book"></i> College Stationery Smart Queue</h1>
+      <p class="subtitle">Get your digital token and avoid waiting in line!</p>
+      <div class="nav-buttons" style="margin-top: 15px;">
+        <a href="/items" class="secondary-btn" style="display: inline-block; margin-right: 10px; text-decoration: none;">
+          <i class="fas fa-shopping-basket"></i> Browse Stationery Items
+        </a>
+      </div>
+    </header>
+
+    <div class="card">
+      <div class="card-header">
+        <h2><i class="fas fa-ticket-alt"></i> Get Your Token</h2>
+      </div>
+      <div class="card-body">
+        <div class="form-group">
+          <label for="name"><i class="fas fa-user"></i> Your Name:</label>
+          <input type="text" id="name" placeholder="Enter your full name" required>
+        </div>
+        
+        <div class="form-group">
+          <label for="phone"><i class="fas fa-phone"></i> Phone Number (for notifications):</label>
+          <input type="tel" id="phone" placeholder="Enter phone number with country code, e.g., +1234567890">
+          <small>Must include country code with + sign (example: +1234567890)</small>
+        </div>
+        
+        <div class="form-group">
+          <label><i class="fas fa-star"></i> Are you:</label>
+          <div class="priority-options">
+            <label class="radio-label">
+              <input type="radio" name="priority" value="0" checked> 
+              <span>Student</span>
+            </label>
+            <label class="radio-label">
+              <input type="radio" name="priority" value="1"> 
+              <span>Faculty</span>
+            </label>
+          </div>
+        </div>
+        
+        <button id="generateBtn" onclick="generateToken()">
+          <i class="fas fa-ticket-alt"></i> Generate My Token
+        </button>
+      </div>
+    </div>
+    
+    <div id="tokenInfo" class="card hidden">
+      <div class="card-header">
+        <h2><i class="fas fa-info-circle"></i> Your Token Information</h2>
+      </div>
+      <div class="card-body centered">
+        <div class="token-number">Token #<span id="tokenId"></span></div>
+        <div class="token-details">
+          <p><strong>Name:</strong> <span id="tokenName"></span></p>
+          <p><strong>Time:</strong> <span id="tokenTime"></span></p>
+          <p><strong>Position in Queue:</strong> <span id="tokenPosition"></span></p>
+          <p><strong>Estimated Wait:</strong> <span id="tokenWait"></span> minutes</p>
+          <p><strong>Status:</strong> <span id="tokenStatus"></span></p>
+        </div>
+        <div class="token-actions">
+          <button onclick="checkStatus()" class="secondary-btn">
+            <i class="fas fa-sync"></i> Refresh Status
+          </button>
+          <button onclick="resetForm()" class="tertiary-btn">
+            <i class="fas fa-plus"></i> New Token
+          </button>
+          <div id="continueWaitingSection" class="hidden" style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #ddd;">
+            <p>Continue to iterate?</p>
+            <div class="button-group">
+              <button onclick="respondToContinueWaiting(true)" class="secondary-btn">
+                <i class="fas fa-check"></i> Yes, keep my place
+              </button>
+              <button onclick="respondToContinueWaiting(false)" class="tertiary-btn">
+                <i class="fas fa-times"></i> No, cancel my token
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <h2><i class="fas fa-list"></i> Current Queue Status</h2>
+        <span class="refresh-btn" onclick="loadQueue()" title="Refresh queue">
+          <i class="fas fa-sync-alt"></i>
+        </span>
+      </div>
+      <div class="card-body">
+        <div class="now-serving">
+          <h3>Now Serving:</h3>
+          <div id="currentServing" class="serving-token">No one is being served right now</div>
+        </div>
+        
+        <h3>Waiting List:</h3>
+        <div class="queue-container">
+          <table id="queueTable" class="queue-table">
+            <thead>
+              <tr>
+                <th>Token #</th>
+                <th>Name</th>
+                <th>Time</th>
+                <th>Position</th>
+                <th>Est. Wait</th>
+              </tr>
+            </thead>
+            <tbody id="queueList">
+              <tr><td colspan="5" class="text-center">Loading queue data...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <footer>
+      <div class="links">
+        <a href="/display" target="_blank">Public Display</a> | 
+        <a href="/items">Shop Stationery</a> |
+        <a href="/staff/login">Staff Login</a>
+      </div>
+      <p>Smart Queue Management System &copy; 2025</p>
+    </footer>
+  </div>
+
+  <script>
+    // Store the current token ID for status checking
+    let currentTokenId = localStorage.getItem('currentTokenId');
+    
+    // If there's a stored token, check its status immediately
+    if (currentTokenId) {
+      checkStoredToken();
+    }
+    
+    async function generateToken() {
+      const name = document.getElementById('name').value;
+      const phone = document.getElementById('phone').value;
+      const priority = document.querySelector('input[name="priority"]:checked').value;
+      
+      if (!name) {
+        alert("Please enter your name");
+        return;
+      }
+      
+      try {
+        document.getElementById('generateBtn').disabled = true;
+        document.getElementById('generateBtn').innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+        
+        const res = await fetch('/generate_token', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ name, phone, priority: parseInt(priority) })
+        });
+        
+        const data = await res.json();
+        
+        if (res.status === 200) {
+          // Store token ID for later reference
+          localStorage.setItem('currentTokenId', data.token_id);
+          currentTokenId = data.token_id;
+          
+          // Display token information
+          document.getElementById('tokenId').textContent = data.token_id;
+          document.getElementById('tokenName').textContent = data.name;
+          document.getElementById('tokenTime').textContent = data.time;
+          document.getElementById('tokenPosition').textContent = data.position;
+          document.getElementById('tokenWait').textContent = data.estimated_wait;
+          document.getElementById('tokenStatus').textContent = data.status;
+          
+          document.getElementById('tokenInfo').classList.remove('hidden');
+          document.getElementById('name').value = '';
+          document.getElementById('phone').value = '';
+          
+          // Scroll to token info
+          document.getElementById('tokenInfo').scrollIntoView({ behavior: 'smooth' });
+        } else {
+          alert("Error: " + (data.error || "Failed to generate token"));
+        }
+      } catch (err) {
+        console.error("Error generating token:", err);
+        alert("An error occurred. Please try again.");
+      } finally {
+        document.getElementById('generateBtn').disabled = false;
+        document.getElementById('generateBtn').innerHTML = '<i class="fas fa-ticket-alt"></i> Generate My Token';
+        loadQueue(); // Refresh queue display
+        loadCurrentServing(); // Update currently serving display
+      }
+    }
+    
+    async function checkStatus() {
+      if (!currentTokenId) return;
+      
+      try {
+        const res = await fetch(`/token/${currentTokenId}`);
+        if (res.status !== 200) {
+          throw new Error("Token not found");
+        }
+        
+        const data = await res.json();
+        
+        document.getElementById('tokenPosition').textContent = data.position || 'N/A';
+        document.getElementById('tokenWait').textContent = data.position ? data.estimated_wait : '0';
+        document.getElementById('tokenStatus').textContent = data.status || 'N/A';
+        
+        // If token is being served or completed, show special message
+        if (data.status === 'serving') {
+          document.getElementById('tokenPosition').textContent = "It's your turn!";
+          document.getElementById('tokenWait').textContent = '0';
+        } else if (data.status === 'completed') {
+          document.getElementById('tokenPosition').textContent = "Completed";
+          document.getElementById('tokenWait').textContent = '0';
+          
+          // Remove from localStorage since it's completed
+          localStorage.removeItem('currentTokenId');
+          currentTokenId = null;
+        } else if (data.status === 'waiting') {
+          document.getElementById('continueWaitingSection').classList.remove('hidden');
+        }
+      } catch (err) {
+        console.error("Error checking token status:", err);
+      }
+    }
+    
+    async function loadQueue() {
+      try {
+        const res = await fetch('/queue_status');
+        const data = await res.json();
+        const list = document.getElementById('queueList');
+        
+        if (data.length === 0) {
+          list.innerHTML = '<tr><td colspan="5" class="text-center">Queue is empty</td></tr>';
+          return;
+        }
+        
+        list.innerHTML = '';
+        
+        data.forEach(item => {
+          const tr = document.createElement('tr');
+          
+          const priorityClass = item.priority > 0 ? 'priority-token' : '';
+          tr.classList.add(priorityClass);
+          
+          // Highlight current user's token
+          if (currentTokenId && parseInt(currentTokenId) === item.id) {
+            tr.classList.add('my-token');
+          }
+          
+          tr.innerHTML = `
+            <td>${item.id}</td>
+            <td>${item.name}</td>
+            <td>${item.time}</td>
+            <td>${item.position}</td>
+            <td>${item.estimated_wait} min</td>
+          `;
+          
+          list.appendChild(tr);
+        });
+      } catch (err) {
+        console.error("Error loading queue:", err);
+      }
+    }
+    
+    async function loadCurrentServing() {
+      try {
+        const res = await fetch('/api/current_serving');
+        const servingDiv = document.getElementById('currentServing');
+        
+        if (res.status === 200) {
+          const data = await res.json();
+          servingDiv.textContent = `Token #${data.id} - ${data.name}`;
+          servingDiv.classList.add('active');
+        } else {
+          servingDiv.textContent = "No one is being served right now";
+          servingDiv.classList.remove('active');
+        }
+      } catch (err) {
+        console.error("Error loading current serving:", err);
+      }
+    }
+    
+    function resetForm() {
+      document.getElementById('tokenInfo').classList.add('hidden');
+      document.getElementById('continueWaitingSection').classList.add('hidden');
+    }
+    
+    async function checkStoredToken() {
+      try {
+        const res = await fetch(`/token/${currentTokenId}`);
+        
+        if (res.status === 200) {
+          const data = await res.json();
+          
+          // If token is still valid, show the token info
+          document.getElementById('tokenId').textContent = data.id;
+          document.getElementById('tokenName').textContent = data.name;
+          document.getElementById('tokenTime').textContent = data.time;
+          document.getElementById('tokenPosition').textContent = 
+            data.status === 'serving' ? "It's your turn!" :
+            data.status === 'completed' ? "Completed" : 
+            data.position;
+          document.getElementById('tokenWait').textContent = 
+            (data.status === 'waiting' && data.position) ? data.estimated_wait : '0';
+          document.getElementById('tokenStatus').textContent = data.status || 'N/A';
+          
+          document.getElementById('tokenInfo').classList.remove('hidden');
+          
+          // If token is completed, remove from localStorage
+          if (data.status === 'completed') {
+            localStorage.removeItem('currentTokenId');
+            currentTokenId = null;
+          } else if (data.status === 'waiting') {
+            document.getElementById('continueWaitingSection').classList.remove('hidden');
+          }
+        } else {
+          // Token not found or expired, remove from localStorage
+          localStorage.removeItem('currentTokenId');
+          currentTokenId = null;
+        }
+      } catch (err) {
+        console.error("Error checking stored token:", err);
+        localStorage.removeItem('currentTokenId');
+        currentTokenId = null;
+      }
+    }
+    
+    async function respondToContinueWaiting(continueWaiting) {
+      try {
+        const res = await fetch(`/token/${currentTokenId}/continue`, {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ continue: continueWaiting })
+        });
+        
+        if (res.status === 200) {
+          const data = await res.json();
+          alert(data.message || "Action completed successfully");
+          if (!continueWaiting) {
+            resetForm();
+            localStorage.removeItem('currentTokenId');
+            currentTokenId = null;
+          }
+        } else {
+          alert("Failed to update token status");
+        }
+      } catch (err) {
+        console.error("Error responding to continue waiting:", err);
+      } finally {
+        document.getElementById('continueWaitingSection').classList.add('hidden');
+        loadQueue();
+      }
+    }
+    
+    // Set up automatic refreshing
+    setInterval(loadQueue, 10000);  // Refresh queue every 10 seconds
+    setInterval(loadCurrentServing, 5000);  // Check current serving every 5 seconds
+    
+    // Initial load
+    loadQueue();
+    loadCurrentServing();
+  </script>
+</body>
+</html>

@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Staff Dashboard - SQMS</title>
+  <link rel="stylesheet" href="/static/index.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1><i class="fas fa-tachometer-alt"></i> Staff Dashboard</h1>
+      <p class="subtitle">Manage the stationery store queue efficiently</p>
+    </header>
+
+    <div class="card">
+      <div class="card-header">
+        <h2><i class="fas fa-user-circle"></i> Welcome, {{ session.username }}</h2>
+        <a href="/staff/logout" style="color: white; text-decoration: none;">
+          <i class="fas fa-sign-out-alt"></i> Logout
+        </a>
+      </div>
+      <div class="card-body">
+        <div class="staff-controls">
+          <button onclick="serveNext()" id="serveBtn" class="secondary-btn">
+            <i class="fas fa-user-check"></i> Serve Next Customer
+          </button>
+          {% if session.is_admin %}
+          <button onclick="location.href='/admin/settings'" class="tertiary-btn">
+            <i class="fas fa-cog"></i> Admin Settings
+          </button>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div class="card" id="currentServingCard">
+      <div class="card-header">
+        <h2><i class="fas fa-bell"></i> Now Serving</h2>
+      </div>
+      <div class="card-body centered">
+        <div id="currentlyServing">
+          <h3 class="status-message">No customer is currently being served</h3>
+        </div>
+        <div id="serveActions" style="display: none;">
+          <button onclick="completeToken()" class="secondary-btn">
+            <i class="fas fa-check"></i> Complete Service
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <h2><i class="fas fa-list"></i> Queue Overview</h2>
+        <span class="refresh-btn" onclick="loadQueue()" title="Refresh queue">
+          <i class="fas fa-sync-alt"></i>
+        </span>
+      </div>
+      <div class="card-body">
+        <div class="queue-container">
+          <table id="queueTable" class="queue-table">
+            <thead>
+              <tr>
+                <th>Token #</th>
+                <th>Name</th>
+                <th>Time</th>
+                <th>Position</th>
+                <th>Priority</th>
+              </tr>
+            </thead>
+            <tbody id="queueList">
+              <tr><td colspan="5" class="text-center">Loading queue data...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <footer>
+      <div class="links">
+        <a href="/" target="_blank">Customer View</a> | 
+        <a href="/display" target="_blank">Public Display</a>
+      </div>
+      <p>Smart Queue Management System &copy; 2025</p>
+    </footer>
+  </div>
+
+  <script>
+    let currentServingToken = null;
+    
+    async function serveNext() {
+      try {
+        document.getElementById('serveBtn').disabled = true;
+        document.getElementById('serveBtn').innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+        
+        const res = await fetch('/staff/serve_next', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'}
+        });
+        
+        const data = await res.json();
+        
+        if (res.status === 200) {
+          // Update the currently serving section
+          currentServingToken = data.token.id;
+          updateCurrentlyServing(data.token);
+          document.getElementById('serveActions').style.display = 'block';
+          
+          // Play notification sound
+          playNotificationSound();
+        } else {
+          document.getElementById('currentlyServing').innerHTML = 
+            '<h3 class="status-message">' + (data.message || 'No customers in queue') + '</h3>';
+          document.getElementById('serveActions').style.display = 'none';
+        }
+        
+        // Refresh the queue
+        loadQueue();
+      } catch (err) {
+        console.error("Error serving next token:", err);
+        alert("An error occurred while trying to serve the next customer.");
+      } finally {
+        document.getElementById('serveBtn').disabled = false;
+        document.getElementById('serveBtn').innerHTML = '<i class="fas fa-user-check"></i> Serve Next Customer';
+      }
+    }
+    
+    function updateCurrentlyServing(token) {
+      document.getElementById('currentlyServing').innerHTML = `
+        <div class="token-display">#${token.id}</div>
+        <h3 class="status-message">Currently serving: ${token.name}</h3>
+        <p><small>Token generated at ${token.time}</small></p>
+      `;
+    }
+    
+    async function completeToken() {
+      if (!currentServingToken) return;
+      
+      try {
+        document.getElementById('serveActions').innerHTML = '<i class="fas fa-spinner fa-spin"></i> Completing...';
+        
+        const res = await fetch(`/staff/complete_token/${currentServingToken}`, {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'}
+        });
+        
+        if (res.status === 200) {
+          document.getElementById('currentlyServing').innerHTML = 
+            '<h3 class="status-message">Service completed. Ready for next customer.</h3>';
+          document.getElementById('serveActions').style.display = 'none';
+          currentServingToken = null;
+        } else {
+          const data = await res.json();
+          alert("Error: " + (data.error || "Failed to complete service"));
+        }
+        
+        // Refresh the queue
+        loadQueue();
+      } catch (err) {
+        console.error("Error completing token:", err);
+        alert("An error occurred while completing the service.");
+      }
+    }
+    
+    async function loadQueue() {
+      try {
+        const res = await fetch('/queue_status');
+        const data = await res.json();
+        const list = document.getElementById('queueList');
+        
+        if (data.length === 0) {
+          list.innerHTML = '<tr><td colspan="5" class="text-center">Queue is empty</td></tr>';
+          return;
+        }
+        
+        list.innerHTML = '';
+        
+        data.forEach(item => {
+          const tr = document.createElement('tr');
+          
+          // Add priority class for faculty members
+          if (item.priority > 0) {
+            tr.classList.add('priority-token');
+          }
+          
+          tr.innerHTML = `
+            <td>${item.id}</td>
+            <td>${item.name}</td>
+            <td>${item.time}</td>
+            <td>${item.position}</td>
+            <td>${item.priority > 0 ? 'Faculty' : 'Student'}</td>
+          `;
+          
+          list.appendChild(tr);
+        });
+      } catch (err) {
+        console.error("Error loading queue:", err);
+      }
+    }
+    
+    function playNotificationSound() {
+      // Create audio element for notification sound
+      const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAAABmYWN0BAAAAAAAAABkYXRhbAYAAAD//v/+//7//v/+//7//v8AAAEAAQACAAIAA...');
+      audio.volume = 0.5;
+      audio.play().catch(e => console.log('Audio play failed:', e));
+    }
+    
+    // Check if a token is currently being served when the page loads
+    async function checkCurrentlyServing() {
+      try {
+        const res = await fetch('/api/current_serving');
+        
+        if (res.status === 200) {
+          const data = await res.json();
+          currentServingToken = data.id;
+          updateCurrentlyServing({
+            id: data.id,
+            name: data.name,
+            time: 'N/A'  // We don't have the time from this API endpoint
+          });
+          document.getElementById('serveActions').style.display = 'block';
+        }
+      } catch (err) {
+        console.error("Error checking currently serving:", err);
+      }
+    }
+    
+    // Set up automatic refreshing
+    setInterval(loadQueue, 10000);  // Refresh queue every 10 seconds
+    
+    // Initialize
+    window.onload = function() {
+      loadQueue();
+      checkCurrentlyServing();
+    };
+  </script>
+</body>
+</html>
